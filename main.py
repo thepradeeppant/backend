@@ -512,7 +512,13 @@ async def run_yt_dlp_with_cookie_fallback(
 ) -> tuple[str, str]:
     logger.info("yt-dlp attempt [%s] %s", context, shlex.join(base_cmd))
     code, out, err = await run_yt_dlp(base_cmd, timeout_sec)
-    if code == 0:
+    
+    base_err = (err or out or "").strip()
+    
+    # If code is 0 (success) and there is no bot check in stderr, we're good.
+    # We must check for bot checks even on code 0 because `--ignore-errors`
+    # (used for playlists) causes yt-dlp to exit with 0 even if all videos fail.
+    if code == 0 and not is_yt_bot_check(base_err):
         return out, err
 
     base_err = (err or out or "").strip()
@@ -537,7 +543,9 @@ async def run_yt_dlp_with_cookie_fallback(
         cookie_cmd = base_cmd[:-1] + ["--cookies-from-browser", browser, base_cmd[-1]]
         logger.info("yt-dlp cookie attempt [%s] browser=%s %s", context, browser, shlex.join(cookie_cmd))
         code, out, err = await run_yt_dlp(cookie_cmd, timeout_sec)
-        if code == 0:
+        attempt_err = (err or out or "").strip()
+
+        if code == 0 and not is_yt_bot_check(attempt_err):
             logger.info("yt-dlp recovered with cookie fallback [%s] browser=%s", context, browser)
             return out, err
 
@@ -1375,7 +1383,7 @@ async def stream_playlist_download(req: PlaylistDownloadRequest):
     try:
         safe_title = safe_download_basename(req.title, "playlist")
         safe_quality = safe_download_basename(req.quality, "best").lower()
-        output_template = str(downloads_dir / "%(playlist_index)03d - %(title).80s.%(ext)s")
+        output_template = str(downloads_dir / "%(playlist_autonumber)03d - %(title).80s.%(ext)s")
 
         download_errors: list[HTTPException] = []
         download_succeeded = False
