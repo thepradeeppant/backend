@@ -706,8 +706,7 @@ def build_playlist_format_selector(quality: str, ffmpeg_available: bool) -> tupl
         f"bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]"
         f"/bestvideo[height<={height}]+bestaudio"
         f"/best[height<={height}][ext=mp4]"
-        f"/best[height<={height}]"
-        f"/best",
+        f"/best[height<={height}]",
         True,
     )
 
